@@ -658,6 +658,15 @@ function questWin(d) {
   </section>`;
 }
 
+function lateWin(d) {
+  const y = add(d.t, -1), sl = slot(y);
+  if (!sl || sl === 'res' || d.done.has(y)) return '';
+  return `<section class="win"><h2 class="win-title">つけ忘れ</h2>
+    <p style="margin:0 0 10px">きのう（${fmt(y)}）の<strong style="color:${subj(sl).c}">${subj(sl).n}</strong>をやったのに、チェックし忘れた人はここから記録できます。きょうのうちだけです。</p>
+    <button class="btn" data-act="late" data-s="${sl}" data-f="${y}">きのうの${subj(sl).n}を記録する</button>
+  </section>`;
+}
+
 function bossHTML(d, mon) {
   const w = d.weekInfo(mon), idx = d.bossIdx(mon), B = BOSSES[idx];
   const left = w.planned.length - w.hits;
@@ -694,7 +703,7 @@ function weekWin(d) {
 }
 
 function viewHome(d) {
-  return `<div class="wrap two"><div class="col">${heroWin(d)}${questWin(d)}</div>
+  return `<div class="wrap two"><div class="col">${heroWin(d)}${questWin(d)}${lateWin(d)}</div>
     <div class="col"><section class="win"><h2 class="win-title">今週のボス</h2>${bossHTML(d, d.curMon)}</section>${weekWin(d)}</div></div>`;
 }
 
@@ -835,7 +844,7 @@ function showReward(before, after, entry) {
   const newBadges = BADGES.filter(b => after.badges.includes(b.id) && !before.badges.includes(b.id));
   const newTitle = after.title.n !== before.title.n;
   const targetMon = entry && entry.k === 'recover' ? monday(entry.f) : after.curMon;
-  const heading = entry.k === 'study' ? 'クエスト達成！' : entry.k === 'recover' ? 'とりかえし成功！' : '自由学習クリア！';
+  const heading = entry.k === 'study' && entry.d !== after.t ? 'きのうの分を記録！' : entry.k === 'study' ? 'クエスト達成！' : entry.k === 'recover' ? 'とりかえし成功！' : '自由学習クリア！';
   const list = parts.map(p => `<li class="${p[2] || ''}"><span>${p[0]}</span><b>+${p[1]}</b></li>`).join('');
   const listed = parts.reduce((a, p) => a + p[1], 0) + wonNow.length * 150;
   const bossLine = (wonNow.length ? `<li><span>ボス討伐</span><b>+${wonNow.length * 150}</b></li>` : '')
@@ -874,6 +883,7 @@ document.addEventListener('click', ev => {
   if (act === 'check' && !has) addEntry({ d: t, s: b.dataset.s, k: 'study' });
   if (act === 'recover' && !has) addEntry({ d: t, s: b.dataset.s, k: 'recover', f: b.dataset.f });
   if (act === 'free' && !has) addEntry({ d: t, s: b.dataset.s, k: 'free' });
+  if (act === 'late' && b.dataset.f === add(t, -1) && !S.entries.some(e => e.d === b.dataset.f)) addEntry({ d: b.dataset.f, s: b.dataset.s, k: 'study' });
   if (act === 'close') document.getElementById('layer').innerHTML = '';
   if (act === 'undo') { S.entries = S.entries.filter(e => e.d !== t); commit(); render(); toast('取り消しました'); }
   if (act === 'min') {
