@@ -1,0 +1,1 @@
+{"name": "家庭学習クエスト", "short_name": "学習クエスト", "start_url": "./", "display": "standalone", "background_color": "#0f2c3f", "theme_color": "#0a1f2e", "icons": [{"src": "icon-180.png", "sizes": "180x180", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}]}

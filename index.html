@@ -1,0 +1,933 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="学習クエスト">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1f2e">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>家庭学習クエスト</title>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
+<style>
+/* Layout: a handheld RPG menu. Stacked pixel windows on a night-sea ground, two columns on wide screens, fixed tab bar. */
+:root {
+  color-scheme: dark;
+  --bg: #0f2c3f;
+  --bg-deep: #0a1f2e;
+  --win: #0b1d2b;
+  --win-2: #14354a;
+  --line: #e9f1e4;
+  --fg: #eef5ea;
+  --mute: #a4bcc4;
+  --gold: #ffcb47;
+  --xp: #58e0a8;
+  --hp: #ff5d6c;
+  --on-gold: #1b1a10;
+  --jpn: #ff8a76;
+  --math: #6db3ff;
+  --eng: #58e0a8;
+  --sci: #c09dff;
+  --soc: #ffb648;
+  --res: #8fa6b2;
+  --font-pixel: "DotGothic16", "Hiragino Kaku Gothic ProN", "Yu Gothic", monospace;
+  --font-body: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image: radial-gradient(var(--win-2) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  padding-top: 18px;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+canvas { image-rendering: pixelated; display: block; max-width: 100%; }
+
+.wrap { max-width: 940px; margin: 0 auto; display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+.col { display: grid; gap: 22px; min-width: 0; align-content: start; }
+@media (min-width: 780px) {
+  .wrap.two { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); }
+}
+
+/* pixel window: notched corners made from four offset shadows */
+.win {
+  background: var(--win);
+  margin: 4px;
+  padding: 16px;
+  box-shadow: -4px 0 0 0 var(--line), 4px 0 0 0 var(--line), 0 -4px 0 0 var(--line), 0 4px 0 0 var(--line);
+  min-width: 0;
+}
+.win-title {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: .08em;
+  margin: 0 0 10px;
+  font-weight: 400;
+}
+.pix { font-family: var(--font-pixel); font-weight: 400; }
+.mute { color: var(--mute); }
+.small { font-size: 13px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; }
+.hero canvas { width: 96px; height: 96px; }
+.hero-name { font-family: var(--font-pixel); font-size: 22px; line-height: 1.25; overflow-wrap: anywhere; }
+.hero-title { color: var(--mute); font-size: 13px; }
+.lv-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.lv { font-family: var(--font-pixel); font-size: 30px; color: var(--gold); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.streak { font-size: 13px; color: var(--fg); }
+.streak b { font-family: var(--font-pixel); color: var(--hp); font-size: 18px; font-weight: 400; }
+.xpbar { height: 14px; margin-top: 12px; background: var(--bg-deep); border: 2px solid var(--line); position: relative; }
+.xpbar i { position: absolute; inset: 0 auto 0 0; background: var(--xp); background-image: repeating-linear-gradient(90deg, transparent 0 8px, var(--win) 8px 10px); transition: width .5s steps(8); }
+.xpnote { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--mute); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+/* quest */
+.quest-date { font-family: var(--font-pixel); color: var(--mute); font-size: 15px; }
+.quest-subj { font-family: var(--font-pixel); font-size: 54px; line-height: 1.15; letter-spacing: .06em; margin: 4px 0 2px; }
+.quest-skill { color: var(--mute); font-size: 13px; margin-bottom: 14px; }
+.btn-main {
+  width: 100%;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: 0;
+  font-family: var(--font-pixel);
+  font-size: 24px;
+  padding: 16px 12px;
+  box-shadow: 0 6px 0 0 #b98a1c;
+  transition: transform .06s, box-shadow .06s;
+}
+.btn-main:active { transform: translateY(5px); box-shadow: 0 1px 0 0 #b98a1c; }
+.btn-main[disabled] { background: var(--win-2); color: var(--mute); box-shadow: none; cursor: default; font-size: 18px; transform: none; }
+.btn { background: var(--win-2); border: 2px solid var(--mute); padding: 7px 12px; font-size: 14px; }
+.btn:hover { border-color: var(--line); }
+.btn.on { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn-text { background: none; border: 0; color: var(--mute); text-decoration: underline; padding: 6px 0; font-size: 13px; }
+.done-mark { display: flex; align-items: center; gap: 12px; margin: 6px 0 12px; }
+.seal {
+  font-family: var(--font-pixel);
+  border: 3px solid var(--hp);
+  color: var(--hp);
+  padding: 4px 10px;
+  font-size: 22px;
+  transform: rotate(-7deg);
+  flex: none;
+}
+.pick { display: grid; gap: 8px; margin-top: 10px; }
+.pick-btn {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  width: 100%; text-align: left;
+  background: var(--win-2); border: 2px solid var(--mute); padding: 10px 12px;
+}
+.pick-btn:hover { border-color: var(--gold); }
+.pick-btn b { font-family: var(--font-pixel); font-weight: 400; font-size: 19px; }
+.pick-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.pick-grid button { background: var(--win-2); border: 2px solid var(--mute); padding: 10px 0; font-family: var(--font-pixel); font-size: 20px; }
+.pick-grid button:hover { border-color: var(--gold); }
+.note { background: var(--win-2); padding: 8px 12px; font-size: 13px; margin-top: 12px; }
+
+/* boss */
+.boss { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; }
+.boss canvas { width: 112px; height: 112px; }
+.boss.down canvas { filter: grayscale(1) brightness(.75); transform: rotate(90deg) scale(.82); }
+.boss-name { font-family: var(--font-pixel); font-size: 21px; line-height: 1.25; }
+.hp { display: flex; gap: 4px; margin: 8px 0 6px; align-items: center; }
+.hp span { font-family: var(--font-pixel); font-size: 13px; color: var(--hp); margin-right: 3px; }
+.hp i { height: 14px; flex: 1 1 0; max-width: 34px; background: var(--hp); }
+.hp i.gone { background: var(--bg-deep); box-shadow: inset 0 0 0 2px var(--win-2); }
+
+/* week */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.day { background: var(--win-2); padding: 6px 0 7px; text-align: center; min-width: 0; position: relative; }
+.day small { display: block; font-size: 12px; color: var(--mute); line-height: 1.3; }
+.day b { display: block; font-family: var(--font-pixel); font-weight: 400; font-size: 21px; line-height: 1.25; }
+.day .st { display: block; font-size: 12px; height: 17px; line-height: 17px; color: var(--mute); font-family: var(--font-pixel); }
+.day.today { box-shadow: 0 0 0 3px var(--gold); }
+.day.off { opacity: .42; }
+.day.done { background: var(--win); }
+.day.done .st { color: var(--xp); }
+.day.miss .st { color: var(--hp); }
+.week-note { margin: 10px 0 0; font-size: 13px; color: var(--mute); }
+
+/* calendar */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cal-head h2 { font-family: var(--font-pixel); font-weight: 400; font-size: 22px; margin: 0; font-variant-numeric: tabular-nums; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow { text-align: center; font-size: 12px; color: var(--mute); }
+.cal-cell { background: var(--win-2); min-height: 62px; padding: 3px 2px; text-align: center; min-width: 0; }
+.cal-cell.blank { background: none; }
+.cal-cell.before { opacity: .35; }
+.cal-cell.today { box-shadow: 0 0 0 3px var(--gold); }
+.cal-cell small { display: block; font-size: 12px; color: var(--mute); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.cal-cell b { display: block; font-family: var(--font-pixel); font-weight: 400; font-size: 18px; line-height: 1.2; }
+.cal-cell span { display: block; font-family: var(--font-pixel); font-size: 13px; line-height: 1.2; height: 16px; }
+.c-ok { color: var(--xp); } .c-ng { color: var(--hp); } .c-wait { color: var(--gold); } .c-free { color: var(--sci); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--mute); margin-top: 12px; }
+.legend b { font-family: var(--font-pixel); font-weight: 400; }
+
+/* status */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 460px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--win-2); padding: 8px 10px; min-width: 0; }
+.tile b { display: block; font-family: var(--font-pixel); font-weight: 400; font-size: 24px; color: var(--gold); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tile small { color: var(--mute); font-size: 12px; }
+.skill { display: grid; grid-template-columns: 3.2em minmax(0, 1fr) 3.4em; gap: 10px; align-items: center; padding: 5px 0; }
+.skill b { font-family: var(--font-pixel); font-weight: 400; font-size: 20px; }
+.skill .bar { height: 12px; background: var(--bg-deep); display: flex; gap: 3px; padding: 2px; }
+.skill .bar i { flex: 1; background: var(--win-2); }
+.skill span { font-family: var(--font-pixel); text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
+.skill small { grid-column: 2 / 4; color: var(--mute); font-size: 12px; margin-top: -8px; }
+.badges { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 560px) { .badges { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.badge { background: var(--win-2); padding: 8px; min-width: 0; }
+.badge b { display: block; font-family: var(--font-pixel); font-weight: 400; font-size: 14px; color: var(--gold); line-height: 1.3; overflow-wrap: anywhere; }
+.badge small { display: block; font-size: 12px; color: var(--mute); line-height: 1.35; }
+.badge.lock { background: none; box-shadow: inset 0 0 0 2px var(--win-2); }
+.badge.lock b { color: var(--mute); }
+.zukan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.zk { background: var(--win-2); padding: 6px; text-align: center; min-width: 0; }
+.zk canvas { width: 100%; height: auto; aspect-ratio: 1; }
+.zk.lock canvas { filter: brightness(0) opacity(.5); }
+.zk small { display: block; font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+
+/* settings */
+.field { display: grid; gap: 4px; margin-bottom: 14px; }
+.field label, .field .lbl { font-size: 13px; color: var(--mute); }
+input[type=text], select {
+  width: 100%; min-width: 0; background: var(--win-2); border: 2px solid var(--mute); padding: 8px 10px; border-radius: 0;
+}
+.sched { display: grid; gap: 6px; }
+.sched-row { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 10px; align-items: center; }
+.sched-row label { font-family: var(--font-pixel); font-size: 18px; }
+
+/* tab bar */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--bg-deep);
+  border-top: 4px solid var(--line);
+  padding-top: 6px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.tabs div { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tabs button { background: none; border: 0; padding: 9px 0; font-family: var(--font-pixel); font-size: 16px; color: var(--mute); }
+.tabs button[aria-current="page"] { color: var(--on-gold); background: var(--gold); }
+
+/* reward */
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(5, 14, 21, .82); display: flex; align-items: center; justify-content: center; overflow-y: auto;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.reward { width: 100%; max-width: 420px; margin: auto; animation: pop .22s steps(3); }
+.reward h2 { font-family: var(--font-pixel); font-weight: 400; font-size: 27px; color: var(--gold); margin: 0 0 8px; text-align: center; }
+.reward .boss { margin-bottom: 10px; }
+.reward .boss canvas { animation: hit .42s steps(5) .15s; }
+.reward ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.reward li { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.reward li b { font-family: var(--font-pixel); font-weight: 400; color: var(--xp); }
+.reward li.crit, .reward li.crit b { color: var(--gold); }
+.reward li.total { border-top: 2px solid var(--win-2); margin-top: 4px; padding-top: 4px; }
+.banner { background: var(--gold); color: var(--on-gold); text-align: center; font-family: var(--font-pixel); padding: 8px 10px; margin-top: 10px; font-size: 19px; animation: blink .5s steps(2) 3; }
+.banner small { display: block; font-size: 14px; }
+.banner.alt { background: var(--hp); color: #1d0a0d; }
+.banner.alt2 { background: var(--sci); color: #150d24; }
+.reward .btn-main { margin-top: 14px; font-size: 20px; padding: 12px; }
+.toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--xp); color: #06251a; padding: 6px 14px; font-family: var(--font-pixel); font-size: 16px; white-space: nowrap; }
+@keyframes pop { from { transform: scale(.86); opacity: .3; } to { transform: scale(1); opacity: 1; } }
+@keyframes hit { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
+@keyframes blink { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .reward, .reward .boss canvas, .banner { animation: none; } .xpbar i { transition: none; } .btn-main { transition: none; } }
+</style>
+
+</head><body>
+<div id="app"></div>
+<nav class="tabs" aria-label="画面切りかえ"><div id="tabs"></div></nav>
+<div id="layer"></div>
+
+<script>
+'use strict';
+const START = '2026-11-06';
+const STORE_KEY = 'study-quest-v1';
+const SUBJ = {
+  jpn: { n: '国語', c: 'var(--jpn)', skill: '読解力' },
+  math:{ n: '数学', c: 'var(--math)', skill: '論理力' },
+  eng: { n: '英語', c: 'var(--eng)', skill: '語学力' },
+  sci: { n: '理科', c: 'var(--sci)', skill: '探究力' },
+  soc: { n: '社会', c: 'var(--soc)', skill: '見聞力' },
+};
+const SUBJ_KEYS = Object.keys(SUBJ);
+const DOW = ['日','月','火','水','木','金','土'];
+const DOW_ORDER = [1,2,3,4,5,6,0];
+const BOSSES = [
+  { n: 'アトデヤル霊', t: '「あとでやる」が口ぐせ。最初の一歩に弱い。', seed: 11, p: ['#b9c6ff','#7d8fe8','#39408f'] },
+  { n: 'スマホ魔人', t: '「あと5分だけ」とささやいて時間を食べる。', seed: 29, p: ['#ff9ad5','#d552a6','#6d1f63'] },
+  { n: 'ネムケ雲', t: '机に向かうと広がる。先に始めれば晴れる。', seed: 47, p: ['#d9e6ee','#93aec0','#4a6478'] },
+  { n: 'ヨソミ猫', t: '窓の外へ気をそらす。集中が続くと逃げ出す。', seed: 62, p: ['#ffd27a','#e8953a','#7d4315'] },
+  { n: 'ワスレ鳥', t: '覚えたことをくわえて飛ぶ。復習が天敵。', seed: 83, p: ['#9ff0d0','#39b98c','#14604d'] },
+  { n: 'ケアレス蟹', t: '符号と単位を切り落とす。見直しに弱い。', seed: 97, p: ['#ff9f8f','#e4503f','#7a1c1c'] },
+  { n: 'ヤルキナシ沼', t: '座ると足が沈む。5分やれば抜け出せる。', seed: 121, p: ['#c9de78','#7f9e35','#3c5118'] },
+  { n: 'イチヤヅケ竜', t: 'テスト前夜に現れる。毎日の積み重ねで倒せる。', seed: 149, p: ['#d6b3ff','#8d5ae0','#3d2280'] },
+];
+const TITLES = [
+  { lv: 1, n: '見習い冒険者', tier: 0 },
+  { lv: 3, n: 'えんぴつ剣士', tier: 1 },
+  { lv: 7, n: 'ノート騎士', tier: 2 },
+  { lv: 12, n: '参考書の賢者', tier: 3 },
+  { lv: 20, n: '定期テスト討伐者', tier: 4 },
+  { lv: 30, n: '五教科マスター', tier: 5 },
+  { lv: 45, n: '伝説の努力家', tier: 6 },
+];
+const BADGES = [
+  { id: 'first', n: 'はじめの一歩', d: '初めてチェックした', t: s => s.quests >= 1 },
+  { id: 's3', n: '三連撃', d: '3回連続で達成', t: s => s.best >= 3 },
+  { id: 's5', n: '五連撃', d: '5回連続で達成', t: s => s.best >= 5 },
+  { id: 's10', n: '十連撃', d: '10回連続で達成', t: s => s.best >= 10 },
+  { id: 's30', n: '不屈の三十', d: '30回連続で達成', t: s => s.best >= 30 },
+  { id: 'b1', n: 'ボス討伐', d: '週ボスを1体倒した', t: s => s.wins >= 1 },
+  { id: 'b4', n: 'ひと月の覇者', d: '週ボスを4体倒した', t: s => s.wins >= 4 },
+  { id: 'b12', n: '三か月の覇者', d: '週ボスを12体倒した', t: s => s.wins >= 12 },
+  { id: 'rec', n: 'あきらめない', d: '予備日でとりかえした', t: s => s.recovers >= 1 },
+  { id: 'free', n: '自主トレ5回', d: '自由学習を5回やった', t: s => s.frees >= 5 },
+  { id: 'crit', n: '会心の三撃', d: 'クリティカルを3回出した', t: s => s.crits >= 3 },
+  { id: 'hours', n: '十時間の旅', d: '学習時間の記録が10時間', t: s => s.minutes >= 600 },
+];
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ds = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const add = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ds(d); };
+const today = () => ds(new Date());
+const dow = s => parse(s).getDay();
+const fmt = s => { const d = parse(s); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + DOW[d.getDay()] + ')'; };
+const monday = s => add(s, -((dow(s) + 6) % 7));
+const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+
+/* ---------- state ---------- */
+function defaults() {
+  return {
+    v: 1, name: 'けんしん', sound: true, updatedAt: 0,
+    scheds: [{ from: START, map: { 1: 'res', 2: 'soc', 3: 'res', 4: 'math', 5: 'eng', 6: 'jpn', 0: 'sci' } }],
+    entries: [],
+  };
+}
+let S = defaults();
+try {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) { const p = JSON.parse(raw); if (p && p.v === 1) S = Object.assign(defaults(), p); }
+} catch (e) {}
+let tab = 'home';
+let calMonth = null;
+let confirmReset = false;
+let sync = 'local';
+let dbRef = null, writing = false, dirty = false;
+
+function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+function commit() {
+  S.updatedAt = Date.now();
+  saveLocal();
+  pushRemote();
+}
+async function pushRemote() {
+  if (!dbRef || sync === 'readonly') return;
+  if (writing) { dirty = true; return; }
+  writing = true;
+  try { await dbRef.set(JSON.parse(JSON.stringify(S))); sync = 'cloud'; }
+  catch (e) { if (e && e.code === 'invalid_argument') { sync = 'readonly'; } }
+  writing = false;
+  if (dirty) { dirty = false; pushRemote(); }
+}
+async function connect() {
+  if (!window.claude || !window.claude.use) return;
+  let db = null;
+  try { db = await window.claude.use('db'); } catch (e) {}
+  if (!db) return;
+  dbRef = db.doc('progress/main');
+  let first = true;
+  dbRef.onSnapshot(snap => {
+    if (snap.metadata && snap.metadata.hasPendingWrites) return;
+    const isDefinitive = !(snap.metadata && snap.metadata.fromCache);
+    const remote = snap.exists ? snap.data() : null;
+    if (remote && remote.v === 1 && (remote.updatedAt || 0) > S.updatedAt) {
+      S = Object.assign(defaults(), JSON.parse(JSON.stringify(remote)));
+      saveLocal();
+      render();
+    }
+    if (isDefinitive) {
+      if (sync === 'local') sync = 'cloud';
+      if (first) {
+        first = false;
+        if (S.updatedAt > ((remote && remote.updatedAt) || 0)) setTimeout(pushRemote, 0);
+      }
+      if (tab === 'set') render();
+    }
+  }, () => { sync = 'local'; });
+}
+
+/* ---------- derived ---------- */
+function schedFor(d) {
+  let m = S.scheds[0].map;
+  for (const s of S.scheds) if (s.from <= d) m = s.map;
+  return m;
+}
+const slot = d => d < START ? null : schedFor(d)[dow(d)];
+const cum = n => 100 * (n - 1) + 20 * (n - 1) * (n - 2);
+function levelOf(xp) { let n = 1; while (cum(n + 1) <= xp) n++; return n; }
+const titleOf = lv => TITLES.filter(t => t.lv <= lv).pop();
+const nextTitle = lv => TITLES.find(t => t.lv > lv);
+function isCrit(d) { let h = 7; for (const c of d) h = (h * 31 + c.charCodeAt(0)) >>> 0; return (h >>> 3) % 5 === 0; }
+
+function derive() {
+  const t = today();
+  const done = new Set();
+  for (const e of S.entries) {
+    if (e.k === 'study') done.add(e.d);
+    if (e.k === 'recover') done.add(e.f);
+  }
+  const streakAt = date => {
+    let n = 0, c = date;
+    for (;;) {
+      const sl = slot(c);
+      if (!sl) break;
+      if (sl !== 'res') { if (done.has(c)) n++; else break; }
+      c = add(c, -1);
+    }
+    return n;
+  };
+  const partsOf = e => {
+    const parts = [];
+    if (e.k === 'study') {
+      parts.push(['クエスト達成', 100]);
+      if (isCrit(e.d)) parts.push(['クリティカル！', 100, 'crit']);
+    } else if (e.k === 'recover') parts.push(['とりかえし', 80]);
+    else parts.push(['自由学習', 60]);
+    if (e.k !== 'free') {
+      const st = Math.min(5, streakAt(e.k === 'recover' ? e.f : e.d) - 1);
+      if (st > 0) parts.push(['連続ボーナス', st * 10]);
+    }
+    if (e.m >= 60) parts.push(['60分以上', 30]);
+    else if (e.m >= 45) parts.push(['45分', 20]);
+    else if (e.m >= 30) parts.push(['30分', 10]);
+    return parts;
+  };
+  const weekInfo = mon => {
+    const days = [];
+    for (let i = 0; i < 7; i++) days.push(add(mon, i));
+    const planned = days.filter(d => slot(d) && slot(d) !== 'res');
+    return { days, planned, hits: planned.filter(d => done.has(d)).length };
+  };
+  const firstMon = monday(START);
+  const curMon = monday(t < START ? START : t);
+  const wonWeeks = [];
+  for (let m = firstMon; m <= curMon; m = add(m, 7)) {
+    const w = weekInfo(m);
+    if (w.planned.length && w.hits === w.planned.length) wonWeeks.push(m);
+  }
+  const bossIdx = m => Math.round(diffDays(firstMon, m) / 7) % BOSSES.length;
+  let xp = wonWeeks.length * 150;
+  let minutes = 0, recovers = 0, frees = 0, crits = 0;
+  const subj = Object.fromEntries(SUBJ_KEYS.map(k => [k, 0]));
+  for (const e of S.entries) {
+    xp += partsOf(e).reduce((a, p) => a + p[1], 0);
+    minutes += e.m || 0;
+    if (e.k === 'recover') recovers++;
+    if (e.k === 'free') frees++;
+    if (e.k === 'study' && isCrit(e.d)) crits++;
+    if (subj[e.s] !== undefined) subj[e.s]++;
+  }
+  let best = 0, run = 0;
+  for (let c = START; c <= t; c = add(c, 1)) {
+    const sl = slot(c);
+    if (sl === 'res') continue;
+    if (done.has(c)) { run++; best = Math.max(best, run); } else if (c < t) run = 0;
+  }
+  const curSlot = slot(t);
+  const streak = (curSlot && curSlot !== 'res' && !done.has(t)) ? streakAt(add(t, -1)) : (curSlot ? streakAt(t) : 0);
+  const missed = [];
+  for (let i = 7; i >= 1; i--) {
+    const d = add(t, -i), sl = slot(d);
+    if (sl && sl !== 'res' && !done.has(d)) missed.push({ d, s: sl });
+  }
+  const stats = { quests: S.entries.length, best, wins: wonWeeks.length, recovers, frees, crits, minutes };
+  const lv = levelOf(xp);
+  return {
+    t, done, streak, best, missed, xp, lv, subj, minutes, stats, wonWeeks, partsOf, weekInfo, bossIdx, curMon,
+    badges: BADGES.filter(b => b.t(stats)).map(b => b.id),
+    title: titleOf(lv),
+  };
+}
+
+/* ---------- sprites ---------- */
+const HERO = [
+  '...kkkkkk...',
+  '..khhhhhhk..',
+  '.khhhhhhhhk.',
+  '.khhssssshk.',
+  '.khsksskshk.',
+  '.kssssssssk.',
+  '..kssssssk..',
+  '..kkcccckk..',
+  '.kccccccccK.',
+  'kscccgcccsk.',
+  'kscccgcccsk.',
+  '.kkccccccck.',
+  '..kddddddk..',
+  '..kddkkddk..',
+  '..kbbkkbbk..',
+  '..kkk..kkk..',
+];
+function drawHero(cv, tier) {
+  cv.width = 20; cv.height = 20;
+  const g = cv.getContext('2d');
+  const cloth = ['#5aa9ff', '#58e0a8', '#ff8a76', '#c09dff', '#e9f1e4', '#ffcb47', '#ff5d6c'][tier];
+  const pal = { k: '#10222e', K: '#10222e', h: '#3a2a22', s: '#f6cda6', c: cloth, g: '#ffcb47', d: '#34506b', b: '#7a4a2b' };
+  const px = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+  if (tier >= 3) { for (let y = 11; y < 18; y++) for (let x = 5; x < 15; x++) px(x, y, '#c7404f'); }
+  HERO.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') px(x + 4, y + 3, pal[ch]); }));
+  if (tier >= 1) {
+    for (let y = 4; y < 12; y++) px(17, y, '#ffd86b');
+    px(17, 3, '#f6cda6'); px(17, 2, '#10222e');
+    px(16, 12, '#ff8a76'); px(17, 12, '#ff8a76'); px(18, 12, '#ff8a76'); px(17, 13, '#7a4a2b');
+  }
+  if (tier >= 2) {
+    for (let y = 10; y < 15; y++) for (let x = 0; x < 4; x++) px(x, y, y === 10 || y === 14 ? '#e9f1e4' : '#5aa9ff');
+    for (let y = 10; y < 15; y++) px(2, y, '#10222e');
+  }
+  if (tier >= 4) {
+    [[7,1],[9,0],[11,0],[13,1]].forEach(([x, y]) => { for (let j = y; j < 3; j++) px(x, j, '#ffcb47'); });
+    for (let x = 7; x < 14; x++) px(x, 2, '#ffcb47');
+    px(10, 1, '#ff5d6c');
+  }
+}
+function drawBoss(cv, idx) {
+  const B = BOSSES[idx], W = 16, H = 16;
+  cv.width = W; cv.height = H;
+  let seed = B.seed;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  let grid = [];
+  for (let y = 0; y < H; y++) {
+    grid.push([]);
+    for (let x = 0; x < 8; x++) {
+      const dx = (7.5 - x) / 7.5, dy = (y - 8) / 8;
+      const r = dx * dx + dy * dy;
+      grid[y].push(r < .55 ? 1 : (r < 1.05 && rnd() < .5 ? 1 : 0));
+    }
+  }
+  for (let n = 0; n < 2; n++) {
+    grid = grid.map((row, y) => row.map((c, x) => {
+      let k = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+        if (!i && !j) continue;
+        const xx = x + i > 7 ? 15 - (x + i) : x + i;
+        if (grid[y + j] && grid[y + j][xx]) k++;
+      }
+      return c ? (k >= 3 ? 1 : 0) : (k >= 6 ? 1 : 0);
+    }));
+  }
+  const on = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return 0; return grid[y][x < 8 ? x : 15 - x]; };
+  const g = cv.getContext('2d');
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (on(x, y)) {
+      const rim = !on(x, y + 1) || !on(x - 1, y) || !on(x + 1, y) || !on(x, y - 1);
+      g.fillStyle = rim ? B.p[2] : (y < 6 ? B.p[0] : B.p[1]);
+      g.fillRect(x, y, 1, 1);
+    }
+  }
+  const eye = (x, y) => {
+    g.fillStyle = '#ffffff'; g.fillRect(x, y, 2, 2);
+    g.fillStyle = '#10222e'; g.fillRect(x + (x < 8 ? 1 : 0), y + 1, 1, 1);
+  };
+  eye(4, 6); eye(10, 6);
+  g.fillStyle = B.p[2]; g.fillRect(6, 10, 4, 1);
+  g.fillStyle = '#ffffff'; g.fillRect(6, 10, 1, 1); g.fillRect(9, 10, 1, 1);
+}
+function paintSprites(root) {
+  const d = derive();
+  root.querySelectorAll('canvas[data-hero]').forEach(c => drawHero(c, +c.dataset.hero));
+  root.querySelectorAll('canvas[data-boss]').forEach(c => drawBoss(c, +c.dataset.boss));
+  return d;
+}
+
+/* ---------- sound ---------- */
+let audio = null;
+function tones(seq) {
+  if (!S.sound) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    let t0 = audio.currentTime + .02;
+    for (const [f, dur] of seq) {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(.05, t0); g.gain.setValueAtTime(0, t0 + dur * .92);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t0); o.stop(t0 + dur);
+      t0 += dur;
+    }
+  } catch (e) {}
+}
+
+/* ---------- views ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const subj = (k) => SUBJ[k];
+const hpBlocks = (total, left) => {
+  let h = '<span>HP</span>';
+  for (let i = 0; i < total; i++) h += `<i class="${i < left ? '' : 'gone'}"></i>`;
+  return h;
+};
+
+function heroWin(d) {
+  const next = cum(d.lv + 1), base = cum(d.lv);
+  const pct = Math.min(100, Math.round((d.xp - base) / (next - base) * 100));
+  return `<section class="win" aria-label="ステータス">
+    <div class="hero">
+      <canvas data-hero="${d.title.tier}" width="20" height="20" role="img" aria-label="${esc(d.title.n)}の主人公"></canvas>
+      <div>
+        <div class="hero-name">${esc(S.name || '冒険者')}</div>
+        <div class="hero-title">${esc(d.title.n)}</div>
+        <div class="lv-row"><span class="lv">Lv.${d.lv}</span><span class="streak">連続 <b>${d.streak}</b> 回</span></div>
+      </div>
+    </div>
+    <div class="xpbar"><i style="width:${pct}%"></i></div>
+    <div class="xpnote"><span>つぎのレベルまで ${next - d.xp} XP</span><span>累計 ${d.xp} XP</span></div>
+  </section>`;
+}
+
+function nextReserve(t) {
+  for (let i = 0; i < 8; i++) { const c = add(t, i); if (slot(c) === 'res') return c; }
+  return null;
+}
+
+function questWin(d) {
+  const t = d.t;
+  const entry = S.entries.find(e => e.d === t);
+  if (t < START) {
+    const n = diffDays(t, START), k = slot(START);
+    return `<section class="win"><h2 class="win-title">最初のクエスト</h2>
+      <div class="quest-date">${fmt(START)} スタート</div>
+      <div class="quest-subj" style="color:${subj(k).c}">${subj(k).n}</div>
+      <div class="quest-skill">${subj(k).skill}をきたえる</div>
+      <button class="btn-main" disabled id="start-wait">冒険開始まで あと${n}日</button>
+    </section>`;
+  }
+  const sl = slot(t);
+  if (entry) {
+    const s = subj(entry.s);
+    const label = entry.k === 'study' ? 'クエスト達成' : entry.k === 'recover' ? `${fmt(entry.f)}の分をとりかえした` : '自由学習クリア';
+    const chips = [15, 30, 45, 60].map(m => `<button class="btn ${entry.m === m ? 'on' : ''}" data-act="min" data-m="${m}">${m === 60 ? '60分以上' : m + '分'}</button>`).join('');
+    return `<section class="win"><h2 class="win-title">きょうのクエスト</h2>
+      <div class="quest-date">${fmt(t)}</div>
+      <div class="done-mark"><span class="seal">済</span><div><div class="pix" style="font-size:26px;color:${s.c};line-height:1.2">${s.n}</div><div class="small mute">${label}</div></div></div>
+      <div class="small mute" style="margin-bottom:6px">どのくらいやった？（30分以上でボーナス）</div>
+      <div class="btn-row">${chips}</div>
+      <button class="btn-text" data-act="undo">まちがえたので取り消す</button>
+    </section>`;
+  }
+  if (sl === 'res') {
+    const rows = d.missed.map(m => `<button class="pick-btn" data-act="recover" data-f="${m.d}" data-s="${m.s}"><b style="color:${subj(m.s).c}">${subj(m.s).n}</b><span class="small mute">${fmt(m.d)}の分 / +80 XP</span></button>`).join('');
+    const free = SUBJ_KEYS.map(k => `<button data-act="free" data-s="${k}" style="color:${subj(k).c}">${subj(k).n[0]}</button>`).join('');
+    return `<section class="win"><h2 class="win-title">きょうは予備日</h2>
+      <div class="quest-date">${fmt(t)}</div>
+      ${d.missed.length ? `<p style="margin:6px 0 0">できなかった日をとりかえせます。ボスにもダメージが入り、連続記録もつながります。</p><div class="pick">${rows}</div>` : `<p style="margin:6px 0 0">とりかえす分はありません。休んでも連続記録は切れません。</p>`}
+      <div class="small mute" style="margin-top:14px">${d.missed.length ? 'または' : 'やりたい人は'}自由学習（+60 XP）</div>
+      <div class="pick-grid">${free}</div>
+    </section>`;
+  }
+  const s = subj(sl);
+  const nr = nextReserve(t);
+  return `<section class="win"><h2 class="win-title">きょうのクエスト</h2>
+    <div class="quest-date">${fmt(t)}</div>
+    <div class="quest-subj" style="color:${s.c}">${s.n}</div>
+    <div class="quest-skill">${s.skill}をきたえる</div>
+    <button class="btn-main" data-act="check" data-s="${sl}">学習した！</button>
+    ${d.missed.length && nr ? `<div class="note">とりかえし待ちが${d.missed.length}件あります。次の予備日は${fmt(nr)}です。</div>` : ''}
+  </section>`;
+}
+
+function bossHTML(d, mon) {
+  const w = d.weekInfo(mon), idx = d.bossIdx(mon), B = BOSSES[idx];
+  const left = w.planned.length - w.hits;
+  const down = w.planned.length > 0 && left === 0;
+  return `<div class="boss ${down ? 'down' : ''}">
+      <canvas data-boss="${idx}" width="16" height="16" role="img" aria-label="${esc(B.n)}"></canvas>
+      <div>
+        <div class="boss-name">${esc(B.n)}</div>
+        <div class="hp">${hpBlocks(w.planned.length, left)}</div>
+        <div class="small mute">${down ? '討伐完了！ +150 XP' : esc(B.t)}</div>
+      </div>
+    </div>`;
+}
+
+function weekWin(d) {
+  const mon = d.curMon, w = d.weekInfo(mon);
+  const cells = w.days.map(c => {
+    const sl = slot(c);
+    const isT = c === d.t;
+    let cls = 'day', st = '';
+    const label = !sl ? '-' : sl === 'res' ? '予' : subj(sl).n[0];
+    const color = sl && sl !== 'res' ? subj(sl).c : 'var(--res)';
+    const free = S.entries.find(e => e.d === c && e.k !== 'study');
+    if (!sl) cls += ' off';
+    else if (sl === 'res') st = free ? '済' : '';
+    else if (d.done.has(c)) { cls += ' done'; st = '済'; }
+    else if (c < d.t) { cls += ' miss'; st = '未'; }
+    if (isT) cls += ' today';
+    return `<div class="${cls}"><small>${DOW[dow(c)]}</small><b style="color:${color}">${label}</b><span class="st">${st}</span></div>`;
+  }).join('');
+  const short = d.weekInfo(mon).planned.length < 5;
+  return `<section class="win"><h2 class="win-title">今週のマップ</h2><div class="week">${cells}</div>
+    <p class="week-note">${short ? '最初の週は金曜スタートなので、ボスのHPも短めです。' : '教科を1つ終えるごとにボスへ1ダメージ。'}</p></section>`;
+}
+
+function viewHome(d) {
+  return `<div class="wrap two"><div class="col">${heroWin(d)}${questWin(d)}</div>
+    <div class="col"><section class="win"><h2 class="win-title">今週のボス</h2>${bossHTML(d, d.curMon)}</section>${weekWin(d)}</div></div>`;
+}
+
+function viewCal(d) {
+  const t = d.t;
+  const base = calMonth || (t < START ? START : t).slice(0, 7);
+  const [y, m] = base.split('-').map(Number);
+  const first = `${y}-${pad(m)}-01`;
+  const len = new Date(y, m, 0).getDate();
+  const blanks = (dow(first) + 6) % 7;
+  let cells = DOW_ORDER.map(i => `<div class="cal-dow">${DOW[i]}</div>`).join('');
+  for (let i = 0; i < blanks; i++) cells += '<div class="cal-cell blank"></div>';
+  let planned = 0, cleared = 0, mins = 0;
+  for (let i = 1; i <= len; i++) {
+    const c = `${y}-${pad(m)}-${pad(i)}`, sl = slot(c);
+    const inMonth = S.entries.filter(e => e.d === c);
+    mins += inMonth.reduce((a, e) => a + (e.m || 0), 0);
+    let mark = '', cls = '', label = '', color = 'var(--res)';
+    if (sl === 'res') {
+      label = '予';
+      if (inMonth.length) mark = '<span class="c-free">★</span>';
+    } else if (sl) {
+      label = subj(sl).n[0]; color = subj(sl).c;
+      if (c <= t || d.done.has(c)) planned++;
+      if (d.done.has(c)) { mark = '<span class="c-ok">◎</span>'; cleared++; }
+      else if (c < t) mark = diffDays(c, t) <= 7 ? '<span class="c-wait">△</span>' : '<span class="c-ng">×</span>';
+    }
+    cells += `<div class="cal-cell ${!sl ? 'before' : ''} ${c === t ? 'today' : ''}"><small>${i}</small><b style="color:${color}">${label || '&nbsp;'}</b>${mark || '<span></span>'}</div>`;
+  }
+  const canPrev = base > START.slice(0, 7);
+  return `<div class="wrap"><section class="win">
+    <div class="cal-head">
+      <button class="btn" data-act="cal" data-dir="-1" ${canPrev ? '' : 'disabled'} aria-label="前の月">前の月</button>
+      <h2>${y}年${m}月</h2>
+      <button class="btn" data-act="cal" data-dir="1" aria-label="次の月">次の月</button>
+    </div>
+    <div class="cal-grid">${cells}</div>
+    <div class="legend"><span><b class="c-ok">◎</b> 達成</span><span><b class="c-wait">△</b> とりかえし可</span><span><b class="c-ng">×</b> 未達成</span><span><b class="c-free">★</b> 予備日に学習</span></div>
+  </section>
+  <section class="win"><h2 class="win-title">この月の記録</h2>
+    <div class="tiles">
+      <div class="tile"><b>${cleared}/${planned}</b><small>達成した教科</small></div>
+      <div class="tile"><b>${planned ? Math.round(cleared / planned * 100) : 0}%</b><small>達成率</small></div>
+      <div class="tile"><b>${Math.floor(mins / 60)}時間${mins % 60}分</b><small>記録した時間</small></div>
+      <div class="tile"><b>${d.best}</b><small>最長連続</small></div>
+    </div>
+  </section></div>`;
+}
+
+function viewStatus(d) {
+  const nt = nextTitle(d.lv);
+  const skills = SUBJ_KEYS.map(k => {
+    const n = d.subj[k], lv = 1 + Math.floor(n / 3), fill = n % 3;
+    return `<div class="skill"><b style="color:${SUBJ[k].c}">${SUBJ[k].n}</b>
+      <div class="bar">${[0, 1, 2].map(i => `<i style="${i < fill ? 'background:' + SUBJ[k].c : ''}"></i>`).join('')}</div>
+      <span>Lv.${lv}</span><small>${SUBJ[k].skill} / ${n}回学習</small></div>`;
+  }).join('');
+  const badges = BADGES.map(b => {
+    const on = d.badges.includes(b.id);
+    return `<div class="badge ${on ? '' : 'lock'}"><b>${on ? esc(b.n) : '？？？'}</b><small>${esc(b.d)}</small></div>`;
+  }).join('');
+  const seen = new Set(d.wonWeeks.map(d.bossIdx));
+  const zk = BOSSES.map((b, i) => `<div class="zk ${seen.has(i) ? '' : 'lock'}"><canvas data-boss="${i}" width="16" height="16" role="img" aria-label="${seen.has(i) ? esc(b.n) : '未討伐'}"></canvas><small>${seen.has(i) ? esc(b.n) : '？？？'}</small></div>`).join('');
+  return `<div class="wrap two"><div class="col">${heroWin(d)}
+    <section class="win"><h2 class="win-title">称号</h2>
+      <p style="margin:0">いまの称号は<strong>${esc(d.title.n)}</strong>。${nt ? `Lv.${nt.lv}で<strong>${esc(nt.n)}</strong>になり、見た目も変わります。` : '最高の称号です。'}</p>
+    </section>
+    <section class="win"><h2 class="win-title">教科スキル</h2>${skills}<p class="small mute" style="margin:6px 0 0">3回学習するごとにスキルLvが上がります。</p></section>
+  </div><div class="col">
+    <section class="win"><h2 class="win-title">冒険の記録</h2><div class="tiles">
+      <div class="tile"><b>${d.stats.quests}</b><small>クエスト</small></div>
+      <div class="tile"><b>${d.best}</b><small>最長連続</small></div>
+      <div class="tile"><b>${d.stats.wins}</b><small>倒したボス</small></div>
+      <div class="tile"><b>${Math.round(d.minutes / 6) / 10}</b><small>時間</small></div>
+    </div></section>
+    <section class="win"><h2 class="win-title">実績 ${d.badges.length}/${BADGES.length}</h2><div class="badges">${badges}</div></section>
+    <section class="win"><h2 class="win-title">ボス図鑑 ${seen.size}/${BOSSES.length}</h2><div class="zukan">${zk}</div></section>
+  </div></div>`;
+}
+
+function viewSet(d) {
+  const map = schedFor(d.t < START ? START : d.t);
+  const opts = cur => [...SUBJ_KEYS.map(k => `<option value="${k}" ${cur === k ? 'selected' : ''}>${SUBJ[k].n}</option>`), `<option value="res" ${cur === 'res' ? 'selected' : ''}>予備日</option>`].join('');
+  const rows = DOW_ORDER.map(i => `<div class="sched-row"><label for="dow-${i}">${DOW[i]}</label><select id="dow-${i}" data-dow="${i}">${opts(map[i])}</select></div>`).join('');
+  const syncMsg = sync === 'cloud' ? 'アカウントに保存しています。別の端末で開いても同じ記録が見られます。'
+    : sync === 'readonly' ? 'この人の権限では共有の記録を変更できないため、この端末にだけ保存しています。'
+    : 'このスマホの中に保存しています。ホーム画面のアイコンから開いてください。';
+  return `<div class="wrap two"><div class="col">
+    <section class="win"><h2 class="win-title">主人公</h2>
+      <div class="field"><label for="hero-name">なまえ（ニックネームでOK）</label><input type="text" id="hero-name" maxlength="12" value="${esc(S.name)}" placeholder="冒険者"></div>
+      <div class="field"><span class="lbl">効果音</span><div class="btn-row"><button class="btn ${S.sound ? 'on' : ''}" data-act="sound" data-v="1">オン</button><button class="btn ${S.sound ? '' : 'on'}" data-act="sound" data-v="0">オフ</button></div></div>
+    </section>
+    <section class="win"><h2 class="win-title">ルール</h2>
+      <ul style="margin:0;padding-left:1.2em" class="small">
+        <li>チェック: 100 XP。たまにクリティカルで2倍</li>
+        <li>連続ボーナス: 1回ごとに+10 XP（最大+50）</li>
+        <li>30分 +10 / 45分 +20 / 60分以上 +30 XP</li>
+        <li>予備日のとりかえし: 80 XP。過去7日分まで、1日1教科</li>
+        <li>予備日の自由学習: 60 XP</li>
+        <li>その週の教科を全部終えるとボス討伐: 150 XP</li>
+      </ul>
+    </section>
+  </div><div class="col">
+    <section class="win"><h2 class="win-title">曜日ごとの教科</h2>
+      <div class="sched">${rows}</div>
+      <p class="small mute" style="margin:10px 0 0">別の曜日と同じ教科を選ぶと、2つの曜日が入れかわります。変更はきょうから反映され、過去の記録は変わりません。</p>
+    </section>
+    <section class="win"><h2 class="win-title">データ</h2>
+      <p class="small" style="margin:0 0 10px">${syncMsg}</p>
+      ${confirmReset
+        ? `<p class="small" style="margin:0 0 8px;color:var(--hp)">記録をすべて消します。元に戻せません。</p><div class="btn-row"><button class="btn" data-act="reset-yes">すべて消す</button><button class="btn" data-act="reset-no">やめる</button></div>`
+        : `<button class="btn" data-act="reset">記録をリセット</button>`}
+    </section>
+  </div></div>`;
+}
+
+function render() {
+  const d = derive();
+  const app = document.getElementById('app');
+  app.innerHTML = tab === 'home' ? viewHome(d) : tab === 'cal' ? viewCal(d) : tab === 'status' ? viewStatus(d) : viewSet(d);
+  paintSprites(app);
+  const tabs = [['home', 'きょう'], ['cal', 'きろく'], ['status', 'つよさ'], ['set', 'せってい']];
+  document.getElementById('tabs').innerHTML = tabs.map(([k, n]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ''}>${n}</button>`).join('');
+}
+
+/* ---------- actions ---------- */
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.getElementById('layer').appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+function showReward(before, after, entry) {
+  const parts = entry ? after.partsOf(entry) : [];
+  const wonNow = after.wonWeeks.filter(w => !before.wonWeeks.includes(w));
+  const total = after.xp - before.xp;
+  const lvUp = after.lv > before.lv;
+  const newBadges = BADGES.filter(b => after.badges.includes(b.id) && !before.badges.includes(b.id));
+  const newTitle = after.title.n !== before.title.n;
+  const targetMon = entry && entry.k === 'recover' ? monday(entry.f) : after.curMon;
+  const heading = entry.k === 'study' ? 'クエスト達成！' : entry.k === 'recover' ? 'とりかえし成功！' : '自由学習クリア！';
+  const list = parts.map(p => `<li class="${p[2] || ''}"><span>${p[0]}</span><b>+${p[1]}</b></li>`).join('');
+  const listed = parts.reduce((a, p) => a + p[1], 0) + wonNow.length * 150;
+  const bossLine = (wonNow.length ? `<li><span>ボス討伐</span><b>+${wonNow.length * 150}</b></li>` : '')
+    + (total > listed ? `<li><span>連続がつながった</span><b>+${total - listed}</b></li>` : '');
+  document.getElementById('layer').innerHTML = `<div class="overlay" role="dialog" aria-modal="true" aria-label="${heading}">
+    <div class="win reward">
+      <h2>${heading}</h2>
+      ${entry.k === 'free' ? '' : bossHTML(after, targetMon)}
+      <ul>${list}${bossLine}<li class="total"><span>合計</span><b>+${total} XP</b></li></ul>
+      ${wonNow.length ? `<div class="banner alt">${esc(BOSSES[after.bossIdx(wonNow[0])].n)}を倒した！</div>` : ''}
+      ${lvUp ? `<div class="banner">レベルアップ！ Lv.${before.lv} → Lv.${after.lv}${newTitle ? `<small>称号「${esc(after.title.n)}」を手に入れた</small>` : ''}</div>` : ''}
+      ${newBadges.map(b => `<div class="banner alt2">実績「${esc(b.n)}」<small>${esc(b.d)}</small></div>`).join('')}
+      <button class="btn-main" data-act="close" id="reward-close">つづける</button>
+    </div></div>`;
+  paintSprites(document.getElementById('layer'));
+  document.getElementById('reward-close').focus({ preventScroll: true });
+  const bars = [[523, .08], [659, .08], [784, .12]];
+  if (lvUp || wonNow.length) bars.push([659, .07], [784, .07], [1047, .24]);
+  tones(bars);
+}
+function addEntry(e) {
+  const before = derive();
+  S.entries.push(e);
+  commit();
+  render();
+  showReward(before, derive(), e);
+}
+
+document.addEventListener('click', ev => {
+  const tabBtn = ev.target.closest('[data-tab]');
+  if (tabBtn) { tab = tabBtn.dataset.tab; confirmReset = false; render(); window.scrollTo(0, 0); return; }
+  const b = ev.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act, t = today();
+  const has = S.entries.some(e => e.d === t);
+  if (act === 'check' && !has) addEntry({ d: t, s: b.dataset.s, k: 'study' });
+  if (act === 'recover' && !has) addEntry({ d: t, s: b.dataset.s, k: 'recover', f: b.dataset.f });
+  if (act === 'free' && !has) addEntry({ d: t, s: b.dataset.s, k: 'free' });
+  if (act === 'close') document.getElementById('layer').innerHTML = '';
+  if (act === 'undo') { S.entries = S.entries.filter(e => e.d !== t); commit(); render(); toast('取り消しました'); }
+  if (act === 'min') {
+    const e = S.entries.find(x => x.d === t);
+    if (e) {
+      const m = +b.dataset.m, before = derive().xp;
+      if (e.m === m) delete e.m; else e.m = m;
+      commit(); render();
+      const diff = derive().xp - before;
+      toast(diff > 0 ? `+${diff} XP` : '記録しました');
+    }
+  }
+  if (act === 'cal') {
+    const base = calMonth || (t < START ? START : t).slice(0, 7);
+    let [y, m] = base.split('-').map(Number);
+    m += +b.dataset.dir;
+    if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
+    calMonth = `${y}-${pad(m)}`;
+    render();
+  }
+  if (act === 'sound') { S.sound = b.dataset.v === '1'; commit(); render(); if (S.sound) tones([[784, .1]]); }
+  if (act === 'reset') { confirmReset = true; render(); }
+  if (act === 'reset-no') { confirmReset = false; render(); }
+  if (act === 'reset-yes') {
+    S = defaults(); confirmReset = false; commit(); render(); toast('リセットしました');
+  }
+});
+document.addEventListener('change', ev => {
+  const el = ev.target;
+  if (el.id === 'hero-name') { S.name = el.value.trim().slice(0, 12); commit(); render(); return; }
+  if (el.dataset && el.dataset.dow !== undefined) {
+    const t = today(), from = t < START ? START : t;
+    const map = Object.assign({}, schedFor(from));
+    const day = el.dataset.dow, val = el.value, old = map[day];
+    if (val === 'res') {
+      const other = Object.keys(map).find(k => map[k] === 'res');
+      map[other] = old;
+    } else {
+      const other = Object.keys(map).find(k => map[k] === val);
+      map[other] = old;
+    }
+    map[day] = val;
+    const last = S.scheds[S.scheds.length - 1];
+    if (last.from === from) last.map = map; else S.scheds.push({ from, map });
+    commit(); render();
+  }
+});
+
+let lastDay = today();
+function tick() { const t = today(); if (t !== lastDay) { lastDay = t; render(); } }
+document.addEventListener('visibilitychange', tick);
+setInterval(tick, 60000);
+
+render();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+</script>
+</body></html>
