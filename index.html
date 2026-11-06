@@ -119,7 +119,7 @@ canvas { image-rendering: pixelated; display: block; max-width: 100%; }
 .btn.on { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .btn-text { background: none; border: 0; color: var(--mute); text-decoration: underline; padding: 6px 0; font-size: 13px; }
-.done-mark { display: flex; align-items: center; gap: 12px; margin: 6px 0 12px; }
+.done-mark { display: flex; align-items: center; gap: 12px; margin: 6px 0 10px; }
 .seal {
   font-family: var(--font-pixel);
   border: 3px solid var(--hp);
@@ -302,7 +302,7 @@ const BADGES = [
   { id: 'b4', n: 'ひと月の覇者', d: '週ボスを4体倒した', t: s => s.wins >= 4 },
   { id: 'b12', n: '三か月の覇者', d: '週ボスを12体倒した', t: s => s.wins >= 12 },
   { id: 'rec', n: 'あきらめない', d: '予備日でとりかえした', t: s => s.recovers >= 1 },
-  { id: 'free', n: '自主トレ5回', d: '自由学習を5回やった', t: s => s.frees >= 5 },
+  { id: 'free', n: '自主トレ5回', d: '追加・自由学習を5回やった', t: s => s.frees >= 5 },
   { id: 'crit', n: '会心の三撃', d: 'クリティカルを3回出した', t: s => s.crits >= 3 },
   { id: 'hours', n: '十時間の旅', d: '学習時間の記録が10時間', t: s => s.minutes >= 600 },
 ];
@@ -415,7 +415,7 @@ function derive() {
       parts.push(['クエスト達成', 100]);
       if (isCrit(e.d)) parts.push(['クリティカル！', 100, 'crit']);
     } else if (e.k === 'recover') parts.push(['とりかえし', 80]);
-    else parts.push(['自由学習', 60]);
+    else parts.push([slot(e.d) === 'res' ? '自由学習' : '追加学習', 60]);
     if (e.k !== 'free') {
       const st = Math.min(5, streakAt(e.k === 'recover' ? e.f : e.d) - 1);
       if (st > 0) parts.push(['連続ボーナス', st * 10]);
@@ -614,7 +614,6 @@ function nextReserve(t) {
 
 function questWin(d) {
   const t = d.t;
-  const entry = S.entries.find(e => e.d === t);
   if (t < START) {
     const n = diffDays(t, START), k = slot(START);
     return `<section class="win"><h2 class="win-title">最初のクエスト</h2>
@@ -625,26 +624,38 @@ function questWin(d) {
     </section>`;
   }
   const sl = slot(t);
-  if (entry) {
-    const s = subj(entry.s);
-    const label = entry.k === 'study' ? 'クエスト達成' : entry.k === 'recover' ? `${fmt(entry.f)}の分をとりかえした` : '自由学習クリア';
-    const chips = [15, 30, 45, 60].map(m => `<button class="btn ${entry.m === m ? 'on' : ''}" data-act="min" data-m="${m}">${m === 60 ? '60分以上' : m + '分'}</button>`).join('');
-    return `<section class="win"><h2 class="win-title">きょうのクエスト</h2>
-      <div class="quest-date">${fmt(t)}</div>
-      <div class="done-mark"><span class="seal">済</span><div><div class="pix" style="font-size:26px;color:${s.c};line-height:1.2">${s.n}</div><div class="small mute">${label}</div></div></div>
-      <div class="small mute" style="margin-bottom:6px">どのくらいやった？（30分以上でボーナス）</div>
-      <div class="btn-row">${chips}</div>
-      <button class="btn-text" data-act="undo">まちがえたので取り消す</button>
-    </section>`;
-  }
+  const todays = S.entries.filter(e => e.d === t);
+  const doneSubj = new Set(todays.map(e => e.s));
+  const extraGrid = label => {
+    const ks = SUBJ_KEYS.filter(k => !doneSubj.has(k));
+    if (!ks.length) return '<p class="small mute" style="margin:14px 0 0">きょうは5教科ぜんぶやりました！</p>';
+    return `<div class="small mute" style="margin-top:14px">${label}</div>
+      <div class="pick-grid">${ks.map(k => `<button data-act="free" data-s="${k}" style="color:${subj(k).c}" aria-label="${subj(k).n}を記録">${subj(k).n[0]}</button>`).join('')}</div>`;
+  };
+  const doneList = todays.map(e => {
+    const lb = e.k === 'study' ? 'クエスト達成' : e.k === 'recover' ? `${fmt(e.f)}の分をとりかえした` : sl === 'res' ? '自由学習' : '追加学習';
+    return `<div class="done-mark"><span class="seal">済</span><div><div class="pix" style="font-size:24px;color:${subj(e.s).c};line-height:1.2">${subj(e.s).n}</div><div class="small mute">${lb}</div></div></div>`;
+  }).join('');
+  const main = todays[0];
+  const tail = main ? `<div class="small mute" style="margin:14px 0 6px">きょう全部でどのくらいやった？（30分以上でボーナス）</div>
+      <div class="btn-row">${[15, 30, 45, 60].map(m => `<button class="btn ${main.m === m ? 'on' : ''}" data-act="min" data-m="${m}">${m === 60 ? '60分以上' : m + '分'}</button>`).join('')}</div>
+      <button class="btn-text" data-act="undo">${todays.length > 1 ? '最後に記録した教科を取り消す' : 'まちがえたので取り消す'}</button>` : '';
   if (sl === 'res') {
     const rows = d.missed.map(m => `<button class="pick-btn" data-act="recover" data-f="${m.d}" data-s="${m.s}"><b style="color:${subj(m.s).c}">${subj(m.s).n}</b><span class="small mute">${fmt(m.d)}の分 / +80 XP</span></button>`).join('');
-    const free = SUBJ_KEYS.map(k => `<button data-act="free" data-s="${k}" style="color:${subj(k).c}">${subj(k).n[0]}</button>`).join('');
     return `<section class="win"><h2 class="win-title">きょうは予備日</h2>
       <div class="quest-date">${fmt(t)}</div>
-      ${d.missed.length ? `<p style="margin:6px 0 0">できなかった日をとりかえせます。ボスにもダメージが入り、連続記録もつながります。</p><div class="pick">${rows}</div>` : `<p style="margin:6px 0 0">とりかえす分はありません。休んでも連続記録は切れません。</p>`}
-      <div class="small mute" style="margin-top:14px">${d.missed.length ? 'または' : 'やりたい人は'}自由学習（+60 XP）</div>
-      <div class="pick-grid">${free}</div>
+      ${doneList}
+      ${d.missed.length ? `<p style="margin:6px 0 0">できなかった日をとりかえせます。何教科でもOK。ボスにもダメージが入り、連続記録もつながります。</p><div class="pick">${rows}</div>` : (todays.length ? '' : `<p style="margin:6px 0 0">とりかえす分はありません。休んでも連続記録は切れません。</p>`)}
+      ${extraGrid(`${d.missed.length ? 'または' : 'やりたい人は'}自由学習（1教科 +60 XP）`)}
+      ${tail}
+    </section>`;
+  }
+  if (main) {
+    return `<section class="win"><h2 class="win-title">きょうのクエスト</h2>
+      <div class="quest-date">${fmt(t)}</div>
+      ${doneList}
+      ${extraGrid('ほかの教科もやった？（1教科 +60 XP）')}
+      ${tail}
     </section>`;
   }
   const s = subj(sl);
@@ -654,6 +665,7 @@ function questWin(d) {
     <div class="quest-subj" style="color:${s.c}">${s.n}</div>
     <div class="quest-skill">${s.skill}をきたえる</div>
     <button class="btn-main" data-act="check" data-s="${sl}">学習した！</button>
+    <p class="small mute" style="margin:10px 0 0">ほかの教科もやったら、チェックのあとに追加できます。</p>
     ${d.missed.length && nr ? `<div class="note">とりかえし待ちが${d.missed.length}件あります。次の予備日は${fmt(nr)}です。</div>` : ''}
   </section>`;
 }
@@ -801,8 +813,8 @@ function viewSet(d) {
         <li>チェック: 100 XP。たまにクリティカルで2倍</li>
         <li>連続ボーナス: 1回ごとに+10 XP（最大+50）</li>
         <li>30分 +10 / 45分 +20 / 60分以上 +30 XP</li>
-        <li>予備日のとりかえし: 80 XP。過去7日分まで、1日1教科</li>
-        <li>予備日の自由学習: 60 XP</li>
+        <li>予備日のとりかえし: 80 XP。過去7日分まで、何教科でも</li>
+        <li>追加学習（その日の教科のほか）・予備日の自由学習: 1教科 60 XP</li>
         <li>その週の教科を全部終えるとボス討伐: 150 XP</li>
       </ul>
     </section>
@@ -844,7 +856,7 @@ function showReward(before, after, entry) {
   const newBadges = BADGES.filter(b => after.badges.includes(b.id) && !before.badges.includes(b.id));
   const newTitle = after.title.n !== before.title.n;
   const targetMon = entry && entry.k === 'recover' ? monday(entry.f) : after.curMon;
-  const heading = entry.k === 'study' && entry.d !== after.t ? 'きのうの分を記録！' : entry.k === 'study' ? 'クエスト達成！' : entry.k === 'recover' ? 'とりかえし成功！' : '自由学習クリア！';
+  const heading = entry.k === 'study' && entry.d !== after.t ? 'きのうの分を記録！' : entry.k === 'study' ? 'クエスト達成！' : entry.k === 'recover' ? 'とりかえし成功！' : slot(entry.d) === 'res' ? '自由学習クリア！' : '追加学習クリア！';
   const list = parts.map(p => `<li class="${p[2] || ''}"><span>${p[0]}</span><b>+${p[1]}</b></li>`).join('');
   const listed = parts.reduce((a, p) => a + p[1], 0) + wonNow.length * 150;
   const bossLine = (wonNow.length ? `<li><span>ボス討伐</span><b>+${wonNow.length * 150}</b></li>` : '')
@@ -879,13 +891,13 @@ document.addEventListener('click', ev => {
   const b = ev.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act, t = today();
-  const has = S.entries.some(e => e.d === t);
-  if (act === 'check' && !has) addEntry({ d: t, s: b.dataset.s, k: 'study' });
-  if (act === 'recover' && !has) addEntry({ d: t, s: b.dataset.s, k: 'recover', f: b.dataset.f });
-  if (act === 'free' && !has) addEntry({ d: t, s: b.dataset.s, k: 'free' });
+  const todays = S.entries.filter(e => e.d === t), sl = slot(t);
+  if (act === 'check' && sl && sl !== 'res' && !todays.some(e => e.k === 'study')) addEntry({ d: t, s: b.dataset.s, k: 'study' });
+  if (act === 'recover' && sl === 'res' && !S.entries.some(e => (e.k === 'recover' && e.f === b.dataset.f) || (e.k === 'study' && e.d === b.dataset.f))) addEntry({ d: t, s: b.dataset.s, k: 'recover', f: b.dataset.f });
+  if (act === 'free' && sl && (sl === 'res' || todays.some(e => e.k === 'study')) && !todays.some(e => e.s === b.dataset.s)) addEntry({ d: t, s: b.dataset.s, k: 'free' });
   if (act === 'late' && b.dataset.f === add(t, -1) && !S.entries.some(e => e.d === b.dataset.f)) addEntry({ d: b.dataset.f, s: b.dataset.s, k: 'study' });
   if (act === 'close') document.getElementById('layer').innerHTML = '';
-  if (act === 'undo') { S.entries = S.entries.filter(e => e.d !== t); commit(); render(); toast('取り消しました'); }
+  if (act === 'undo') { const i = S.entries.map(e => e.d).lastIndexOf(t); if (i >= 0) S.entries.splice(i, 1); commit(); render(); toast('取り消しました'); }
   if (act === 'min') {
     const e = S.entries.find(x => x.d === t);
     if (e) {
